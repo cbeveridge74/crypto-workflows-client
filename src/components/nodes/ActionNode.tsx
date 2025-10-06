@@ -1,11 +1,26 @@
-import { Handle, Position } from 'reactflow';
+import { Handle, Position, type NodeProps } from 'reactflow';
+import { useWorkflowStore } from '../store';
 
-export default function ActionNode({ data }: any) {
+export default function ActionNode({ id, data } : NodeProps) {
+  const updateNodeData = useWorkflowStore((s) => s.updateNodeData);
+
   return (
-    <div className="p-3 bg-green-100 border border-green-400 rounded-lg shadow-sm w-48 text-sm">
-      <strong>Action</strong>
-      <div>{data.actionType}</div>
-      <div>Msg: {data.message}</div>
+    <div className="bg-white border rounded-md p-3 w-48 shadow-md">
+      <div className="font-semibold text-sm mb-1">Action</div>
+      <select
+        className="w-full border rounded p-1 mb-1"
+        value={data.actionType}
+        onChange={(e) => updateNodeData(id, { actionType: e.target.value })}
+      >
+        <option value="log">Log</option>
+        <option value="alert">Alert</option>
+      </select>
+      <input
+        type="text"
+        className="w-full border rounded p-1"
+        value={data.message}
+        onChange={(e) => updateNodeData(id, { message: e.target.value })}
+      />
       <Handle type="target" position={Position.Left} />
     </div>
   );

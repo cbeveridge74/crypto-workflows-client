@@ -1,11 +1,26 @@
-import { Handle, Position } from 'reactflow';
+import { Handle, Position, type NodeProps } from 'reactflow';
+import { useWorkflowStore } from '../store';
 
-export default function TriggerNode({ data }: any) {
+export default function TriggerNode({ id, data }: NodeProps) {
+  const updateNodeData = useWorkflowStore((s) => s.updateNodeData);
+
   return (
-    <div className="p-3 bg-yellow-100 border border-yellow-400 rounded-lg shadow-sm w-48 text-sm">
-      <strong>Trigger</strong>
-      <div>{data.triggerType}</div>
-      <div>Value: {data.value}</div>
+    <div className="bg-white border rounded-md p-3 w-48 shadow-md">
+      <div className="font-semibold text-sm mb-1">Trigger</div>
+      <select
+        className="w-full border rounded p-1 mb-1"
+        value={data.triggerType}
+        onChange={(e) => updateNodeData(id, { triggerType: e.target.value })}
+      >
+        <option value="price_above">Price Above</option>
+        <option value="price_below">Price Below</option>
+      </select>
+      <input
+        type="number"
+        className="w-full border rounded p-1"
+        value={data.value}
+        onChange={(e) => updateNodeData(id, { value: +e.target.value })}
+      />
       <Handle type="source" position={Position.Right} />
     </div>
   );
