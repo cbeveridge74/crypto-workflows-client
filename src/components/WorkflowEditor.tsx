@@ -7,20 +7,24 @@ import { useWorkflowStore } from './store';
 const nodeTypes = { triggerNode: TriggerNode, actionNode: ActionNode };
 
 export default function WorkflowEditor() {
-  const { nodes, edges } = useWorkflowStore();
+  const { nodes, edges, setNodes, setEdges, onConnect } = useWorkflowStore();
 
   return (
-    <div style={{ width: '100%', height: '100vh' }}>
-      <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView>
-      <MiniMap
-  nodeStrokeWidth={2}
-  nodeColor={(node) => {
-    if (node.type === 'triggerNode') return '#f87171'; // red-400
-    if (node.type === 'actionNode') return '#34d399';  // green-400
-    return '#d1d5db'; // gray-300
-  }}
-  maskColor="rgba(0,0,0,0.1)"
-/>
+    <div className="w-full h-screen">
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={setNodes}
+        onEdgesChange={setEdges}
+        onConnect={onConnect}
+        nodeTypes={nodeTypes}
+        fitView
+      >
+        <MiniMap
+          nodeColor={(node) =>
+            node.type === 'triggerNode' ? '#f87171' : node.type === 'actionNode' ? '#34d399' : '#d1d5db'
+          }
+        />
         <Controls />
         <Background />
       </ReactFlow>
