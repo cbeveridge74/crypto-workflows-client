@@ -1,8 +1,8 @@
 import { Handle, Position, type NodeProps } from 'reactflow';
-import { useWorkflowStore } from '../store';
+import { useStore } from '../../store/useStore';
 
 export default function TriggerNode({ id, data }: NodeProps) {
-  const updateNodeData = useWorkflowStore((s) => s.updateNodeData);
+  const updateNodeData = useStore((s) => s.updateNodeData);
 
   return (
     <div className="bg-white border rounded-md p-3 w-48 shadow-md">

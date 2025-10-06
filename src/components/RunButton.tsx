@@ -1,7 +1,7 @@
-import { useWorkflowStore } from './store';
+import { useStore } from '../store/useStore';
 
 export default function RunButton() {
-  const { nodes, edges } = useWorkflowStore();
+  const { nodes, edges } = useStore();
 
   const runWorkflow = async () => {
     const workflow = { nodes, edges };
