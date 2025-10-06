@@ -2,12 +2,13 @@ import ReactFlow, { MiniMap, Controls, Background } from 'reactflow';
 import 'reactflow/dist/style.css';
 import TriggerNode from './nodes/TriggerNode';
 import ActionNode from './nodes/ActionNode';
-import { useWorkflowStore } from './store';
+//import { useWorkflowStore } from './store';
+import { useStore } from '../store/useStore';
 
 const nodeTypes = { triggerNode: TriggerNode, actionNode: ActionNode };
 
 export default function WorkflowEditor() {
-  const { nodes, edges, setNodes, setEdges, onConnect } = useWorkflowStore();
+  const { nodes, edges, setNodes, setEdges, onConnect } = useStore();
 
   return (
     <div className="w-full h-screen">
