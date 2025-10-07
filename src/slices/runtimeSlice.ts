@@ -1,4 +1,5 @@
 import { type StateCreator } from 'zustand';
+import { actionHandlers } from '../actions/actions';
 
 export interface RuntimeSlice {
   running: boolean;
@@ -46,20 +47,16 @@ export const createRuntimeSlice: StateCreator<any, [], [], RuntimeSlice> = (set,
 
           // --- Execute connected action nodes ---
           actionNodes.forEach((action: any) => {
-            if (action.type === 'actionNode') {
-              const actionType = action.data.actionType || action.data.type; // fallback for legacy data
-              const message = action.data.value || 'Action triggered';
-            
-              switch (actionType) {
-                case 'log':
-                  console.log(`🪵 ACTION: ${message}`);
-                  break;
-                case 'alert':
-                  alert(`🚨 ACTION: ${message}`);
-                  break;
-                default:
-                  console.warn(`⚠️ Unknown action type: ${actionType}`);
-              }
+            if (action.type !== 'actionNode') return;
+
+            const actionType = action.data.type;
+            const message = action.data.value;
+
+            const handler = actionHandlers[actionType];
+            if (handler) {
+              handler(message);
+            } else {
+              console.warn(`⚠️ Unknown action type: ${actionType}`);
             }
           });
         }
