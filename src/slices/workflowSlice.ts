@@ -46,7 +46,7 @@ interface NodeData {
 
 export const createWorkflowSlice: StateCreator<any, [], [], WorkflowSlice> = (set, get) => ({
   nodes: triggerNodeData,
-  edges: [],
+  edges: [{ id: 'e1-2', source: '1', target: '2' }],
   setNodes: (changes) => set({ nodes: applyNodeChanges(changes, get().nodes) }),
   setEdges: (changes) => set({ edges: applyEdgeChanges(changes, get().edges) }),
   onConnect: (connection) => set({ edges: addEdge(connection, get().edges) }),
