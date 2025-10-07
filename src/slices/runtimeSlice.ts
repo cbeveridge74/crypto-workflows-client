@@ -1,4 +1,3 @@
-// slices/runtimeSlice.ts
 import { type StateCreator } from 'zustand';
 
 export interface RuntimeSlice {
@@ -15,17 +14,23 @@ export const createRuntimeSlice: StateCreator<any, [], [], RuntimeSlice> = (set,
     set({ running: true });
     console.log('▶️ Workflow started');
 
-    const { nodes } = get(); // <-- get all nodes from workflow slice
+    const { nodes, edges } = get(); // get both from workflow slice
     const triggerNode = nodes.find((n: any) => n.type === 'triggerNode');
-
     if (!triggerNode) {
-      console.warn('⚠️ No trigger node found, aborting workflow.');
+      console.warn('⚠️ No trigger node found.');
       set({ running: false });
       return;
     }
 
     const threshold = triggerNode.data?.value ?? 0;
     console.log(`📈 Monitoring BTC price > $${threshold}`);
+
+    // --- Find connected Action node(s) ---
+    const connectedEdges = edges.filter((e: any) => e.source === triggerNode.id);
+    const connectedActionIds = connectedEdges.map((e: any) => e.target);
+    const actionNodes = nodes.filter((n: any) =>
+      connectedActionIds.includes(n.id)
+    );
 
     const interval = setInterval(async () => {
       try {
@@ -38,7 +43,25 @@ export const createRuntimeSlice: StateCreator<any, [], [], RuntimeSlice> = (set,
 
         if (price > threshold) {
           console.log(`🚨 Trigger fired: BTC > $${threshold}!`);
-          // In future: look up connected Action node and execute it
+
+          // --- Execute connected action nodes ---
+          actionNodes.forEach((action: any) => {
+            if (action.type === 'actionNode') {
+              const actionType = action.data.actionType || action.data.type; // fallback for legacy data
+              const message = action.data.value || 'Action triggered';
+            
+              switch (actionType) {
+                case 'log':
+                  console.log(`🪵 ACTION: ${message}`);
+                  break;
+                case 'alert':
+                  alert(`🚨 ACTION: ${message}`);
+                  break;
+                default:
+                  console.warn(`⚠️ Unknown action type: ${actionType}`);
+              }
+            }
+          });
         }
       } catch (err) {
         console.error('Error fetching Bitcoin price', err);
