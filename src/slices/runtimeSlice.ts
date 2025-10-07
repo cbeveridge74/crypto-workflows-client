@@ -1,4 +1,7 @@
 import { type StateCreator } from 'zustand';
+import type { NodeData } from './workflowSlice';
+import type { Edge, Node } from 'reactflow';
+import { actionRegistry, loadActions } from '../actions';
 
 export interface RuntimeSlice {
   running: boolean;
@@ -9,29 +12,15 @@ export interface RuntimeSlice {
 export const createRuntimeSlice: StateCreator<any, [], [], RuntimeSlice> = (set, get) => ({
   running: false,
 
-  startWorkflow: () => {
+  startWorkflow: async () => {
     if (get().running) return;
     set({ running: true });
+
+    // Ensure all action classes are loaded dynamically
+    await loadActions();
+
     console.log('▶️ Workflow started');
-
-    const { nodes, edges } = get(); // get both from workflow slice
-    const triggerNode = nodes.find((n: any) => n.type === 'triggerNode');
-    if (!triggerNode) {
-      console.warn('⚠️ No trigger node found.');
-      set({ running: false });
-      return;
-    }
-
-    const threshold = triggerNode.data?.value ?? 0;
-    console.log(`📈 Monitoring BTC price > $${threshold}`);
-
-    // --- Find connected Action node(s) ---
-    const connectedEdges = edges.filter((e: any) => e.source === triggerNode.id);
-    const connectedActionIds = connectedEdges.map((e: any) => e.target);
-    const actionNodes = nodes.filter((n: any) =>
-      connectedActionIds.includes(n.id)
-    );
-
+  
     const interval = setInterval(async () => {
       try {
         const res = await fetch(
@@ -40,34 +29,35 @@ export const createRuntimeSlice: StateCreator<any, [], [], RuntimeSlice> = (set,
         const data = await res.json();
         const price = data.bitcoin.usd;
         console.log('💰 BTC price:', price);
-
-        if (price > threshold) {
-          console.log(`🚨 Trigger fired: BTC > $${threshold}!`);
-
-          // --- Execute connected action nodes ---
-          actionNodes.forEach((action: any) => {
-            if (action.type === 'actionNode') {
-              const actionType = action.data.actionType || action.data.type; // fallback for legacy data
-              const message = action.data.value || 'Action triggered';
-            
-              switch (actionType) {
-                case 'log':
-                  console.log(`🪵 ACTION: ${message}`);
-                  break;
-                case 'alert':
-                  alert(`🚨 ACTION: ${message}`);
-                  break;
-                default:
-                  console.warn(`⚠️ Unknown action type: ${actionType}`);
+  
+        // --- find trigger nodes whose conditions are met ---
+        const triggerNodes = get().nodes.filter((n: Node<NodeData>) => n.type === 'triggerNode');
+  
+        triggerNodes.forEach((trigger: Node) => {
+          if (trigger.data.type === 'price_above' && price > trigger.data.value) {
+            console.log(`🚨 Trigger fired: BTC > ${trigger.data.value}`);
+  
+            // --- execute connected action nodes ---
+            const actionNodes = get().edges
+              .filter((e: Edge) => e.source === trigger.id)
+              .map((e: Edge) => get().nodes.find((n: Node) => n.id === e.target))
+              .filter(Boolean) as Node<NodeData>[];
+  
+            actionNodes.forEach(async (actionNode:Node<NodeData>) => {
+              const handler = actionRegistry[actionNode.data.type];
+              if (handler) {
+                await handler.execute(actionNode, get()); // handler can now be async
+              } else {
+                console.warn(`⚠️ Unknown action type: ${actionNode.data.type}`);
               }
-            }
-          });
-        }
+            });
+          }
+        });
       } catch (err) {
         console.error('Error fetching Bitcoin price', err);
       }
     }, 10000);
-
+  
     (get() as any)._intervalId = interval;
   },
 
