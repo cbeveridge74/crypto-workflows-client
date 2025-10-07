@@ -1,7 +1,7 @@
 import { type StateCreator } from 'zustand';
-import { actionHandlers } from '../actions/actions';
 import type { NodeData } from './workflowSlice';
 import type { Edge, Node } from 'reactflow';
+import { actionRegistry } from '../actions';
 
 export interface RuntimeSlice {
   running: boolean;
@@ -40,9 +40,9 @@ export const createRuntimeSlice: StateCreator<any, [], [], RuntimeSlice> = (set,
               .filter(Boolean) as Node<NodeData>[];
   
             actionNodes.forEach(async (actionNode:Node<NodeData>) => {
-              const handler = actionHandlers[actionNode.data.type];
+              const handler = actionRegistry[actionNode.data.type];
               if (handler) {
-                await handler(actionNode); // handler can now be async
+                await handler.execute(actionNode, get()); // handler can now be async
               } else {
                 console.warn(`⚠️ Unknown action type: ${actionNode.data.type}`);
               }
