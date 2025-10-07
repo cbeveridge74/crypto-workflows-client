@@ -1,11 +1,9 @@
 import ReactFlow, { MiniMap, Controls, Background } from 'reactflow';
 import 'reactflow/dist/style.css';
-import TriggerNode from './nodes/TriggerNode';
-import ActionNode from './nodes/ActionNode';
-//import { useWorkflowStore } from './store';
 import { useStore } from '../store/useStore';
+import AppNode from './nodes/AppNode';
 
-const nodeTypes = { triggerNode: TriggerNode, actionNode: ActionNode };
+const nodeTypes = { triggerNode: AppNode, actionNode: AppNode };
 
 export default function WorkflowEditor() {
   const { nodes, edges, setNodes, setEdges, onConnect } = useStore();
