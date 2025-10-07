@@ -1,29 +1,35 @@
 // runtime/actions/index.ts
 import type { IAction } from './IAction';
 
-const modules = import.meta.glob('./*.ts', { eager: true });
+const actionRegistry: Record<string, IAction> = {};
 
-const allActions: IAction[] = [];
+// Use dynamic imports (not eager) for async loading
+const modules = import.meta.glob('./*.ts');
 
-for (const path in modules) {
-  const module = modules[path] as Record<string, unknown>;
+export async function loadActions() {
+  const entries = Object.entries(modules);
 
-  Object.values(module).forEach((Exported) => {
-    // Type guard: ensure Exported is a constructor function
-    if (typeof Exported === 'function') {
-      try {
-        const instance = new (Exported as { new (): IAction })();
-        // Check it actually matches the IAction interface
-        if (instance.type && typeof instance.execute === 'function') {
-          allActions.push(instance);
+  for (const [path, importer] of entries) {
+    try {
+      const module = (await importer()) as Record<string, unknown>;
+
+      Object.values(module).forEach((Exported) => {
+        // Only handle constructable classes
+        if (typeof Exported === 'function') {
+          try {
+            const instance = new (Exported as { new (): IAction })();
+            if (instance.type && typeof instance.execute === 'function') {
+              actionRegistry[instance.type] = instance;
+            }
+          } catch (err) {
+            console.warn(`Skipping non-constructable export in ${path}:`, err);
+          }
         }
-      } catch (err) {
-        console.warn(`Skipping non-constructable export in ${path}:`, err);
-      }
+      });
+    } catch (err) {
+      console.error(`Failed to import ${path}:`, err);
     }
-  });
+  }
 }
 
-export const actionRegistry: Record<string, IAction> = Object.fromEntries(
-  allActions.map((action) => [action.type, action])
-);
+export { actionRegistry };

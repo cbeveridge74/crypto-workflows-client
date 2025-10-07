@@ -1,7 +1,7 @@
 import { type StateCreator } from 'zustand';
 import type { NodeData } from './workflowSlice';
 import type { Edge, Node } from 'reactflow';
-import { actionRegistry } from '../actions';
+import { actionRegistry, loadActions } from '../actions';
 
 export interface RuntimeSlice {
   running: boolean;
@@ -12,9 +12,13 @@ export interface RuntimeSlice {
 export const createRuntimeSlice: StateCreator<any, [], [], RuntimeSlice> = (set, get) => ({
   running: false,
 
-  startWorkflow: () => {
+  startWorkflow: async () => {
     if (get().running) return;
     set({ running: true });
+
+    // Ensure all action classes are loaded dynamically
+    await loadActions();
+
     console.log('▶️ Workflow started');
   
     const interval = setInterval(async () => {
