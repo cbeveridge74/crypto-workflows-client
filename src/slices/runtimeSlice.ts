@@ -1,22 +1,25 @@
 import { type StateCreator } from 'zustand';
-import type { NodeData } from './workflowSlice';
-import type { Edge, Node } from 'reactflow';
 import { actionRegistry, loadActions } from '../actions';
+import { loadTriggers, triggerRegistry } from '../triggers';
+import type { Edge, Node } from 'reactflow';
+import type { NodeData } from './workflowSlice';
 
 export interface RuntimeSlice {
   running: boolean;
+  btcPrice?: number;
   startWorkflow: () => void;
   stopWorkflow: () => void;
+  setBtcPrice: (price: number) => void;
 }
 
 export const createRuntimeSlice: StateCreator<any, [], [], RuntimeSlice> = (set, get) => ({
   running: false,
-
+  btcPrice: undefined,
   startWorkflow: async () => {
     if (get().running) return;
     set({ running: true });
-
-    // Ensure all action classes are loaded dynamically
+  
+    await loadTriggers();
     await loadActions();
 
     console.log('▶️ Workflow started');
@@ -28,33 +31,35 @@ export const createRuntimeSlice: StateCreator<any, [], [], RuntimeSlice> = (set,
         );
         const data = await res.json();
         const price = data.bitcoin.usd;
+    
+        // store centrally
+        get().setBtcPrice(price);
+    
         console.log('💰 BTC price:', price);
-  
-        // --- find trigger nodes whose conditions are met ---
-        const triggerNodes = get().nodes.filter((n: Node<NodeData>) => n.type === 'triggerNode');
-  
-        triggerNodes.forEach((trigger: Node) => {
-          if (trigger.data.type === 'price_above' && price > trigger.data.value) {
-            console.log(`🚨 Trigger fired: BTC > ${trigger.data.value}`);
-  
-            // --- execute connected action nodes ---
-            const actionNodes = get().edges
-              .filter((e: Edge) => e.source === trigger.id)
-              .map((e: Edge) => get().nodes.find((n: Node) => n.id === e.target))
+        const context = get(); // pass workflow state to triggers/actions
+    
+        // check triggers
+        const triggers = context.nodes.filter((n:Node<NodeData>) => n.type!.endsWith('Node'));
+        for (const triggerNode of triggers) {
+          const trigger = triggerRegistry[triggerNode.data.type];
+          if (trigger && (await trigger.check(triggerNode, context))) {
+            console.log(`🚨 Trigger fired: ${triggerNode.data.type}`);
+    
+            // execute connected action nodes
+            const actionNodes = context.edges
+              .filter((e: Edge) => e.source === triggerNode.id)
+              .map((e: Edge) => context.nodes.find((n:Node<NodeData>) => n.id === e.target))
               .filter(Boolean) as Node<NodeData>[];
-  
-            actionNodes.forEach(async (actionNode:Node<NodeData>) => {
-              const handler = actionRegistry[actionNode.data.type];
-              if (handler) {
-                await handler.execute(actionNode, get()); // handler can now be async
-              } else {
-                console.warn(`⚠️ Unknown action type: ${actionNode.data.type}`);
-              }
-            });
+    
+            for (const actionNode of actionNodes) {
+              const handler =
+                actionRegistry[actionNode.data.type];
+              if (handler) await handler.execute(actionNode, context);
+            }
           }
-        });
-      } catch (err) {
-        console.error('Error fetching Bitcoin price', err);
+        }
+      } catch(err){
+        console.error('Error fetching BTC price', err);
       }
     }, 10000);
   
@@ -67,4 +72,5 @@ export const createRuntimeSlice: StateCreator<any, [], [], RuntimeSlice> = (set,
     set({ running: false });
     console.log('⏹️ Workflow stopped');
   },
+  setBtcPrice: (price) => set({ btcPrice: price }),
 });
