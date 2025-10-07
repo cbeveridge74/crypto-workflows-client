@@ -6,6 +6,8 @@ import type { NodeData, WorkflowSlice } from '../slices/workflowSlice';
 export class LogAction implements IAction {
   type = 'log';
 
+  constructor (){}
+
   async execute(node: Node<NodeData>, context: WorkflowSlice) {
     console.log(`🪵 ACTION: ${node.data.value}`);
   }
