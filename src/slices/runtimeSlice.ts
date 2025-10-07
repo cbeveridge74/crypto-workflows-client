@@ -9,10 +9,23 @@ export interface RuntimeSlice {
 
 export const createRuntimeSlice: StateCreator<any, [], [], RuntimeSlice> = (set, get) => ({
   running: false,
+
   startWorkflow: () => {
-    if (get().running) return; // prevent double-starts
+    if (get().running) return;
     set({ running: true });
     console.log('▶️ Workflow started');
+
+    const { nodes } = get(); // <-- get all nodes from workflow slice
+    const triggerNode = nodes.find((n: any) => n.type === 'triggerNode');
+
+    if (!triggerNode) {
+      console.warn('⚠️ No trigger node found, aborting workflow.');
+      set({ running: false });
+      return;
+    }
+
+    const threshold = triggerNode.data?.value ?? 0;
+    console.log(`📈 Monitoring BTC price > $${threshold}`);
 
     const interval = setInterval(async () => {
       try {
@@ -23,26 +36,22 @@ export const createRuntimeSlice: StateCreator<any, [], [], RuntimeSlice> = (set,
         const price = data.bitcoin.usd;
         console.log('💰 BTC price:', price);
 
-        // --- Example trigger condition ---
-        if (price > 125300) {
-          console.log('🚨 Trigger fired: BTC > $60k!');
-          // Here you could later call an Action node
+        if (price > threshold) {
+          console.log(`🚨 Trigger fired: BTC > $${threshold}!`);
+          // In future: look up connected Action node and execute it
         }
       } catch (err) {
         console.error('Error fetching Bitcoin price', err);
       }
-    }, 10000); // every 10s
+    }, 10000);
 
-    // store interval ID so we can stop later
     (get() as any)._intervalId = interval;
   },
 
   stopWorkflow: () => {
     const interval = (get() as any)._intervalId;
-    if (interval) {
-      clearInterval(interval);
-      console.log('⏹️ Workflow stopped');
-    }
+    if (interval) clearInterval(interval);
     set({ running: false });
+    console.log('⏹️ Workflow stopped');
   },
 });
