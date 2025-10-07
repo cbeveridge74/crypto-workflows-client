@@ -1,5 +1,7 @@
 import { type StateCreator } from 'zustand';
 import { actionHandlers } from '../actions/actions';
+import type { NodeData } from './workflowSlice';
+import type { Edge, Node } from 'reactflow';
 
 export interface RuntimeSlice {
   running: boolean;
@@ -14,25 +16,7 @@ export const createRuntimeSlice: StateCreator<any, [], [], RuntimeSlice> = (set,
     if (get().running) return;
     set({ running: true });
     console.log('▶️ Workflow started');
-
-    const { nodes, edges } = get(); // get both from workflow slice
-    const triggerNode = nodes.find((n: any) => n.type === 'triggerNode');
-    if (!triggerNode) {
-      console.warn('⚠️ No trigger node found.');
-      set({ running: false });
-      return;
-    }
-
-    const threshold = triggerNode.data?.value ?? 0;
-    console.log(`📈 Monitoring BTC price > $${threshold}`);
-
-    // --- Find connected Action node(s) ---
-    const connectedEdges = edges.filter((e: any) => e.source === triggerNode.id);
-    const connectedActionIds = connectedEdges.map((e: any) => e.target);
-    const actionNodes = nodes.filter((n: any) =>
-      connectedActionIds.includes(n.id)
-    );
-
+  
     const interval = setInterval(async () => {
       try {
         const res = await fetch(
@@ -41,30 +25,35 @@ export const createRuntimeSlice: StateCreator<any, [], [], RuntimeSlice> = (set,
         const data = await res.json();
         const price = data.bitcoin.usd;
         console.log('💰 BTC price:', price);
-
-        if (price > threshold) {
-          console.log(`🚨 Trigger fired: BTC > $${threshold}!`);
-
-          // --- Execute connected action nodes ---
-          actionNodes.forEach((action: any) => {
-            if (action.type !== 'actionNode') return;
-
-            const actionType = action.data.type;
-            const message = action.data.value;
-
-            const handler = actionHandlers[actionType];
-            if (handler) {
-              handler(message);
-            } else {
-              console.warn(`⚠️ Unknown action type: ${actionType}`);
-            }
-          });
-        }
+  
+        // --- find trigger nodes whose conditions are met ---
+        const triggerNodes = get().nodes.filter((n: Node<NodeData>) => n.type === 'triggerNode');
+  
+        triggerNodes.forEach((trigger: Node) => {
+          if (trigger.data.type === 'price_above' && price > trigger.data.value) {
+            console.log(`🚨 Trigger fired: BTC > ${trigger.data.value}`);
+  
+            // --- execute connected action nodes ---
+            const actionNodes = get().edges
+              .filter((e: Edge) => e.source === trigger.id)
+              .map((e: Edge) => get().nodes.find((n: Node) => n.id === e.target))
+              .filter(Boolean) as Node<NodeData>[];
+  
+            actionNodes.forEach(async (actionNode:Node<NodeData>) => {
+              const handler = actionHandlers[actionNode.data.type];
+              if (handler) {
+                await handler(actionNode); // handler can now be async
+              } else {
+                console.warn(`⚠️ Unknown action type: ${actionNode.data.type}`);
+              }
+            });
+          }
+        });
       } catch (err) {
         console.error('Error fetching Bitcoin price', err);
       }
     }, 10000);
-
+  
     (get() as any)._intervalId = interval;
   },
 
