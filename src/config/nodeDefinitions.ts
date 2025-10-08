@@ -15,6 +15,7 @@ export const nodeDefinitions = {
       options: [
         { value: 'log', label: 'Log' },
         { value: 'alert', label: 'Alert' },
+        { value: 'buy', label: 'Buy' },
       ],
     },
   } as const;
