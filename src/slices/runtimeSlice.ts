@@ -10,60 +10,80 @@ export interface RuntimeSlice {
   setBtcPrice: (price: number) => void;
 }
 
-export const createRuntimeSlice: StateCreator<any, [], [], RuntimeSlice> = (set, get) => ({
-  running: false,
-  btcPrice: undefined,
+export const createRuntimeSlice: StateCreator<any, [], [], RuntimeSlice> = (set, get) => {
+  // track the poll timeout so we can clear it when stopping
+  let pollTimeout: number | null = null;
 
-  setBtcPrice: (price) => set({ btcPrice: price }),
+  return {
+    running: false,
+    btcPrice: undefined,
 
-  startWorkflow: () => {
-    set({ running: true });
+    setBtcPrice: (price) => set({ btcPrice: price }),
 
-    const run = async () => {
-      if (!get().running) return;
+    startWorkflow: () => {
+      // avoid starting multiple concurrent loops
+      if (get().running) return;
 
-      try {
-        const res = await fetch(
-          'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd'
-        );
-        const data = await res.json();
-        const price = data.bitcoin.usd;
-        get().setBtcPrice(price);
-        console.log('💰 BTC price:', price);
+      set({ running: true });
 
-        // get triggers from workflow state
-        const { nodes, edges } = get();
-        const triggerNodes = nodes.filter((n: any) => n.type === 'triggerNode');
-        const actionNodes = nodes.filter((n: any) => n.type === 'actionNode');
+      const run = async () => {
+        if (!get().running) return;
 
-        for (const triggerNode of triggerNodes) {
-          const trigger = triggerRegistry[triggerNode.data.type];
-          if (trigger && (await trigger.check(triggerNode))) {
-            console.log(`⚡ Trigger fired: ${triggerNode.data.type}`);
+        try {
+          const res = await fetch(
+            'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd'
+          );
+          const data = await res.json();
+          const price = data.bitcoin.usd;
+          get().setBtcPrice(price);
+          console.log('💰 BTC price:', price);
 
-            // find connected action nodes
-            const connectedEdges = edges.filter((e: any) => e.source === triggerNode.id);
-            for (const edge of connectedEdges) {
-              const action = actionNodes.find((n: any) => n.id === edge.target);
-              if (action) {
-                const handler = actionRegistry[action.data.type];
-                if (handler) {
-                  await handler.execute(action);
+          // get triggers from workflow state
+          const { nodes, edges } = get();
+          const triggerNodes = nodes.filter((n: any) => n.type === 'triggerNode');
+          const actionNodes = nodes.filter((n: any) => n.type === 'actionNode');
+
+          for (const triggerNode of triggerNodes) {
+            const trigger = triggerRegistry[triggerNode.data.type];
+            if (trigger && (await trigger.check(triggerNode))) {
+              console.log(`⚡ Trigger fired: ${triggerNode.data.type}`);
+
+              // find connected action nodes
+              const connectedEdges = edges.filter((e: any) => e.source === triggerNode.id);
+              for (const edge of connectedEdges) {
+                const action = actionNodes.find((n: any) => n.id === edge.target);
+                if (action) {
+                  const handler = actionRegistry[action.data.type];
+                  if (handler) {
+                    await handler.execute(action);
+                  }
                 }
               }
             }
           }
+        } catch (err) {
+          console.error('Error in workflow loop', err);
         }
-      } catch (err) {
-        console.error('Error in workflow loop', err);
+
+        // re-run every 10s
+        if (get().running) {
+          // clear any existing timeout just in case, then store the new id
+          if (pollTimeout !== null) {
+            clearTimeout(pollTimeout);
+          }
+          pollTimeout = window.setTimeout(run, 10000) as unknown as number;
+        }
+      };
+
+      run();
+    },
+
+    stopWorkflow: () => {
+      set({ running: false });
+      if (pollTimeout !== null) {
+        clearTimeout(pollTimeout);
+        pollTimeout = null;
       }
-
-      // re-run every 10s
-      if (get().running) setTimeout(run, 10000);
-    };
-
-    run();
-  },
-
-  stopWorkflow: () => set({ running: false }),
-});
+    },
+  } as RuntimeSlice;
+};
