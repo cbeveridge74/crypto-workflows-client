@@ -1,4 +1,4 @@
-import type { IAction } from './IAction';
+import type { IAction } from '@actions/IAction';
 
 // Automatically import all classes that end with "Action"
 const modules = import.meta.glob('./*Action.ts', { eager: true }) as Record<

@@ -1,6 +1,6 @@
 import { type StateCreator } from 'zustand';
-import { actionRegistry } from '../actions/index';
-import { triggerRegistry } from '../triggers/index';
+import { actionRegistry } from '@actions/index';
+import { triggerRegistry } from '@triggers/index';
 
 export interface RuntimeSlice {
   running: boolean;

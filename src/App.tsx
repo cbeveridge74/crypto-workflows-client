@@ -1,5 +1,5 @@
-import WorkflowEditor from './components/WorkflowEditor';
-import RunButton from './components/RunButton';
+import WorkflowEditor from '@components/WorkflowEditor';
+import RunButton from '@components/RunButton';
 
 function App() {
   return (

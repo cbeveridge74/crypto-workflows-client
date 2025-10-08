@@ -1,5 +1,5 @@
-import { useStore } from '../store/useStore';
-import type { ITrigger } from './ITrigger';
+import { useStore } from '@store/useStore';
+import type { ITrigger } from '@triggers/ITrigger';
 
 export class PriceBelowTrigger implements ITrigger {
   type = 'price_below';
