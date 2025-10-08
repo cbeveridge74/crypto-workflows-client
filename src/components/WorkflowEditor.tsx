@@ -1,7 +1,7 @@
 import ReactFlow, { MiniMap, Controls, Background } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { useStore } from '../store/useStore';
-import AppNode from './nodes/AppNode';
+import { useStore } from '@store/useStore';
+import AppNode from '@nodes/AppNode';
 
 const nodeTypes = { triggerNode: AppNode, actionNode: AppNode };
 

@@ -1,7 +1,7 @@
 import { Handle, Position, type NodeProps } from 'reactflow';
-import { nodeDefinitions } from '../../config/nodeDefinitions';
-import { useStore } from '../../store/useStore';
-import type { NodeData } from '../../slices/workflowSlice';  
+import { nodeDefinitions } from '@config/nodeDefinitions';
+import { useStore } from '@store/useStore';
+import type { NodeData } from '@slices/workflowSlice';  
 
 export default function AppNode({ id, type, data }: NodeProps<NodeData>) {
   const updateNodeData = useStore((s) => s.updateNodeData);

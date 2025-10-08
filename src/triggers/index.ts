@@ -1,4 +1,4 @@
-import type { ITrigger } from './ITrigger';
+import type { ITrigger } from '@triggers/ITrigger';
 
 // Automatically import all classes that end with "Trigger"
 const modules = import.meta.glob('./*Trigger.ts', { eager: true }) as Record<

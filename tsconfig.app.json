@@ -21,7 +21,17 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "noUncheckedSideEffectImports": true,
+    "baseUrl": ".",
+    "paths": {
+      "@components/*": ["src/components/*"],
+      "@nodes/*": ["src/components/nodes/*"],
+      "@slices/*": ["src/slices/*"],
+      "@actions/*": ["src/actions/*"],
+      "@store/*": ["src/store/*"],
+      "@config/*": ["src/config/*"],
+      "@triggers/*": ["src/triggers/*"]
+    }
   },
   "include": ["src"]
 }
